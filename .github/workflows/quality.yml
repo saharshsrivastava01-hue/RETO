@@ -5,16 +5,26 @@ on:
   pull_request:
     branches: [main]
 jobs:
-  static-check:
+  backend-and-storefront-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate storefront files
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install backend dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate JavaScript and run safety smoke tests
+        run: npm run check
+      - name: Validate storefront assets
         run: |
           test -s index.html
+          test -s account.html
+          test -s admin.html
           test -s manifest.webmanifest
           test -s sw.js
           python -m json.tool manifest.webmanifest >/dev/null
           grep -q '<title>RETO' index.html
           grep -q 'DISCOVERY SAMPLE' index.html
-          echo "RETO static checks passed"
+          echo "RETO storefront checks passed"
