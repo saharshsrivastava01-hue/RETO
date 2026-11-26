@@ -1,0 +1,21 @@
+stages:
+  - validate
+  - deploy
+
+validate_storefront:
+  stage: validate
+  image: python:3.12-alpine
+  script:
+    - test -s index.html
+    - test -s manifest.webmanifest
+    - test -s sw.js
+    - python -m json.tool manifest.webmanifest >/dev/null
+    - grep -q '<title>RETO' index.html
+    - grep -q 'DISCOVERY SAMPLE' index.html
+    - echo "RETO static checks passed"
+  only:
+    - main
+
+# Deployment is handled by Render's Git-connected auto-deploy.
+# Add protected variables and a deployment job only after configuring
+# a GitLab runner and an approved deployment credential.
