@@ -1,0 +1,20 @@
+name: RETO quality checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  static-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate storefront files
+        run: |
+          test -s index.html
+          test -s manifest.webmanifest
+          test -s sw.js
+          python -m json.tool manifest.webmanifest >/dev/null
+          grep -q '<title>RETO' index.html
+          grep -q 'DISCOVERY SAMPLE' index.html
+          echo "RETO static checks passed"
