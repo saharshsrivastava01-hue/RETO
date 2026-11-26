@@ -1,0 +1,162 @@
+openapi: 3.1.0
+info:
+  title: RETO Commerce and Sourcing API
+  version: 1.0.0
+  description: Customer accounts, retailer discovery, product catalogue and sourcing workflow. Payments are intentionally not implemented.
+servers:
+  - url: https://reto-store.onrender.com
+    description: Existing static prototype host; API becomes available after Node service deployment
+  - url: http://localhost:10000
+    description: Local development
+tags:
+  - name: System
+  - name: Catalogue
+  - name: Accounts
+  - name: Sourcing
+  - name: Admin
+paths:
+  /api/health:
+    get:
+      tags: [System]
+      summary: Check API and database readiness
+      responses:
+        "200": { description: API and database available }
+  /api/catalogue:
+    get:
+      tags: [Catalogue]
+      summary: List published product records
+      responses:
+        "200": { description: Published catalogue; availability must still be independently verified }
+  /api/retailers:
+    get:
+      tags: [Catalogue]
+      summary: List retailer directory records
+      responses:
+        "200": { description: Retailer directory }
+  /api/auth/register:
+    post:
+      tags: [Accounts]
+      summary: Register a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        "201": { description: Account created and signed session returned }
+        "409": { description: Email already registered }
+  /api/auth/login:
+    post:
+      tags: [Accounts]
+      summary: Sign in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200": { description: Signed session returned }
+        "401": { description: Credentials invalid }
+  /api/me:
+    get:
+      tags: [Accounts]
+      security: [{ bearerAuth: [] }]
+      summary: Get current customer profile
+      responses:
+        "200": { description: Current profile }
+        "401": { description: Authentication required }
+  /api/inquiries:
+    post:
+      tags: [Sourcing]
+      summary: Submit a sourcing enquiry (not an order)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, product_name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                email: { type: string, format: email }
+                phone: { type: string, maxLength: 40 }
+                product_name: { type: string, minLength: 2, maxLength: 180 }
+                product_url: { type: string, format: uri }
+                quantity: { type: integer, minimum: 1, maximum: 10000 }
+                budget_inr: { type: number, minimum: 0 }
+                notes: { type: string, maxLength: 3000 }
+      responses:
+        "201": { description: Enquiry recorded for manual review }
+  /api/order-requests:
+    post:
+      tags: [Sourcing]
+      security: [{ bearerAuth: [] }]
+      summary: Request manual order review for eligible catalogue products
+      description: Rejected unless each product is published, marked in stock and explicitly authorised for resale. No payment is processed.
+      responses:
+        "201": { description: Request recorded for manual confirmation; payment disabled }
+        "409": { description: One or more items are not verified for sale }
+  /api/admin/inquiries:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: List sourcing enquiries (admin only)
+      responses:
+        "200": { description: Enquiry list }
+        "403": { description: Admin permission required }
+  /api/admin/inquiries/{id}:
+    patch:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Update enquiry workflow status (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Enquiry updated }
+  /api/admin/products:
+    post:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Create a product record (admin only)
+      description: Product status defaults to draft; availability defaults to unverified; resale authorisation defaults to false.
+      responses:
+        "201": { description: Product created }
+  /api/admin/products/{id}:
+    patch:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: Update product details and verification flags (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Product updated }
+  /api/admin/orders:
+    get:
+      tags: [Admin]
+      security: [{ bearerAuth: [] }]
+      summary: List order requests (admin only)
+      responses:
+        "200": { description: Order request list }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
